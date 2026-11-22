@@ -4,4 +4,6 @@ dist/
 *.db-shm
 *.db-wal
 .env
-data/
+/data/
+*.db
+server/data/*.db
