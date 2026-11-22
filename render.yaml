@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: retos-cena
+    runtime: node
+    buildCommand: bash build.sh
+    startCommand: node server/src/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /tmp/retos-cena-data
+    autoDeploy: true

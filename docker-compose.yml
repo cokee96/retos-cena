@@ -1,0 +1,15 @@
+services:
+  retos-cena:
+    build: .
+    ports:
+      - "3001:3001"
+    volumes:
+      - sqlite_data:/data
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATA_DIR=/data
+
+volumes:
+  sqlite_data:
