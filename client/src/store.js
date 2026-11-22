@@ -23,7 +23,7 @@ export const useStore = create((set, get) => ({
   isHost: loadSession().isHost || false,
 
   // Room state
-  roomStatus: null, // 'waiting' | 'playing' | 'ended'
+  roomStatus: loadSession().roomStatus || null, // 'waiting' | 'playing' | 'ended'
   players: [],
   config: {},
 
@@ -44,14 +44,14 @@ export const useStore = create((set, get) => ({
 
   clearSession: () => {
     localStorage.removeItem(SESSION_KEY);
-    set({ token: null, playerId: null, playerName: null, roomCode: null, isHost: false });
+    set({ token: null, playerId: null, playerName: null, roomCode: null, isHost: false, roomStatus: null });
   },
 
-  setRoomState: (state) => set({
-    roomStatus: state.status,
-    players: state.players,
-    config: state.config,
-  }),
+  setRoomState: (state) => {
+    const session = { ...loadSession(), roomStatus: state.status };
+    saveSession(session);
+    set({ roomStatus: state.status, players: state.players, config: state.config });
+  },
 
   setChallenge: (challenge) => set({ currentChallenge: challenge }),
 

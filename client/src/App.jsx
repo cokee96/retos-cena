@@ -7,15 +7,22 @@ import Game from './screens/Game';
 import Ranking from './screens/Ranking';
 
 export default function App() {
-  const { token, roomCode, roomStatus, setSession, setRoomState, setChallenge, showDrink, showDenounce, showDenounceResult, setRanking, setError } = useStore();
+  const { token, roomCode, roomStatus, setSession, setRoomState, setChallenge, showDrink, showDenounce, showDenounceResult, setRanking, setError, clearSession } = useStore();
 
   useEffect(() => {
     socket.connect();
 
-    // If we have a saved session, attempt reconnect
-    if (token && roomCode) {
-      socket.emit('reconnect_player', { token });
+    // Re-emit reconnect_player on every connect/reconnect so socket.data stays populated on the server
+    function handleConnect() {
+      const { token: t, roomCode: rc } = useStore.getState();
+      if (t && rc) socket.emit('reconnect_player', { token: t });
     }
+
+    socket.on('connect', handleConnect);
+
+    socket.on('reconnect_failed', () => {
+      clearSession();
+    });
 
     socket.on('joined', ({ token: t, playerId, isHost }) => {
       setSession({ token: t, playerId, isHost });
@@ -23,16 +30,12 @@ export default function App() {
 
     socket.on('room_state', (state) => {
       setRoomState(state);
-      useStore.setState({ roomCode: state.code });
-      const session = JSON.parse(localStorage.getItem('retos-cena-session') || '{}');
-      if (session.roomCode !== state.code) {
-        const store = useStore.getState();
-        store.setSession({ roomCode: state.code });
-      }
+      const store = useStore.getState();
+      if (store.roomCode !== state.code) store.setSession({ roomCode: state.code });
     });
 
     socket.on('game_started', () => {
-      useStore.setState({ roomStatus: 'playing' });
+      useStore.getState().setSession({ roomStatus: 'playing' });
     });
 
     socket.on('new_challenge', (challenge) => {
@@ -40,11 +43,11 @@ export default function App() {
     });
 
     socket.on('drink', (data) => {
-      showDrink(data); // data = { executorName } or empty
+      showDrink(data);
     });
 
     socket.on('denounced', (data) => {
-      showDenounce(data); // data = { denounceEventId, denouncerName }
+      showDenounce(data);
     });
 
     socket.on('denounce_resolved', (data) => {
@@ -52,7 +55,7 @@ export default function App() {
     });
 
     socket.on('game_ended', ({ ranking }) => {
-      useStore.setState({ roomStatus: 'ended' });
+      useStore.getState().setSession({ roomStatus: 'ended' });
       setRanking(ranking);
     });
 
@@ -62,6 +65,8 @@ export default function App() {
     });
 
     return () => {
+      socket.off('connect', handleConnect);
+      socket.off('reconnect_failed');
       socket.off('joined');
       socket.off('room_state');
       socket.off('game_started');

@@ -56,10 +56,10 @@ function registerHandlers(io, socket) {
   // --- RECONNECT ---
   socket.on('reconnect_player', ({ token }) => {
     const player = token ? db.prepare('SELECT * FROM players WHERE token = ?').get(token) : null;
-    if (!player) return socket.emit('error', { message: 'Token inválido' });
+    if (!player) return socket.emit('reconnect_failed', { reason: 'invalid_token' });
 
     const room = db.prepare('SELECT * FROM rooms WHERE id = ?').get(player.room_id);
-    if (!room) return socket.emit('error', { message: 'Sala no encontrada' });
+    if (!room) return socket.emit('reconnect_failed', { reason: 'room_not_found' });
 
     db.prepare('UPDATE players SET socket_id = ? WHERE id = ?').run(socket.id, player.id);
     socket.join(room.code);
@@ -80,6 +80,8 @@ function registerHandlers(io, socket) {
           : null;
         socket.emit('new_challenge', { id: activeChallenge.id, text: activeChallenge.text, targetName: target?.name ?? null });
       }
+    } else if (room.status === 'ended') {
+      socket.emit('game_ended', { ranking: getRanking(room.id) });
     }
   });
 
